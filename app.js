@@ -16,17 +16,63 @@ function render(){const s=state.scenario; let html=`<header><span class="logo">�
  app.innerHTML=html; bind();}
 function chat(s){const msgs=[]; for(let i=0;i<state.stage&&i<3;i++){if(i===0)msgs.push(`<div class="msg user">${esc(s.question)}</div>`); else msgs.push(`<div class="msg agent">${esc(s.answer[i-1])}</div>`)} let done=state.stage>=3; return `<main class="conversation"><div class="topic">${esc(s.question)}</div><div class="messages">${msgs.join('')}${state.stage<3?'<div class="typing">Agent 正在认真想…</div>':''}</div>${done?`<div class="discovery"><p>${esc(s.discovery)}</p><h2>想要看看其他人吗？</h2><span>如果你现在不想继续找答案，也可以看看，这周还有谁在想与你有关的事情。</span><div><button class="ghost" data-action="stay">暂时不用</button><button class="primary" data-action="discover">看看</button></div></div>`:''}</main>`}
 function directions(s){return `<main class="directions"><p class="eyebrow">发现层</p><h1>我发现了两条<br/>可能与你有关的表达。</h1><div class="direction a"><span>A · 处境相近</span><h2>我知道有一个人，和你的处境非常接近。</h2><button data-action="view" data-id="A">查看 A <b>→</b></button></div><div class="direction b"><span>B · 结构相近</span><h2>但我知道还有另一个人，可能更值得试试。</h2><p>TA 经历的事情和你不同，但我发现，你们似乎都在面对相似的选择。</p><button data-action="view" data-id="B">查看 B <b>→</b></button></div></main>`}
-function card(c,key){return `<main class="card-page"><button class="back" data-action="back">← 返回</button><p class="eyebrow">${c.path}</p><div class="quote">“${esc(c.quote)}”</div><p class="source">${esc(c.source)} · ${esc(c.time)} <em>演示数据</em></p><section><label>为什么可能与你有关</label><p>${esc(c.shared)}</p></section><section class="difference"><label>留下一点不同</label><p>${esc(c.difference)}</p></section><p class="identity">${esc(c.context)}</p><div class="actions">${c.contact?`<button class="primary" data-action="write">回应 TA</button>`:''}<button class="ghost" data-action="back">只是看看</button></div></main>`}
+function card(c,key){return `<main class="card-page"><button class="back" data-action="back">← 返回</button><p class="eyebrow">${c.path}</p><div class="quote">“${esc(c.quote)}”</div><p class="source">${esc(c.source)} · ${esc(c.time)} <em>${c.real?'真实授权内容':'演示数据'}</em></p><section><label>为什么可能与你有关</label><p>${esc(c.shared)}</p></section><section class="difference"><label>留下一点不同</label><p>${esc(c.difference)}</p></section><p class="identity">${esc(c.context)}</p><div class="actions">${c.contact?`<button class="primary" data-action="write">回应 TA</button>`:''}<button class="ghost" data-action="back">只是看看</button></div></main>`}
 function letter(c){return `<main class="letter-page"><button class="back" data-action="back">← 返回表达</button><p class="eyebrow">写给 ${esc(c.name)}</p><h1>现在轮到你，写一句你还没对任何人说过的话。</h1><p>这封信会发给刚才看见的 TA。对方可以接受，也可以不回应。</p><textarea id="letter" placeholder="写下你想对 TA 说的话……">${esc(state.letter)}</textarea><div class="actions"><button class="ghost" data-action="back">取消</button><button class="primary" data-action="send">发送邀请</button></div></main>`}
 function invite(c){return `<main class="status-page"><div class="status-icon">✓</div><p class="eyebrow">邀请已发送</p><h1>等 TA 做出选择。</h1><p>你的话已经送给 ${esc(c.name)}。Demo 主路径中，TA 选择了接受。</p><div class="sent-message">“${esc(state.letter)}”</div><button class="primary" data-action="accept">进入私人交流</button><button class="text-btn" data-action="reset">结束这次 Demo</button></main>`}
 function privateChat(c){return `<main class="private-page"><p class="eyebrow">私人交流 · ${esc(c.name)}</p><h1>从这里开始，交给你们自己。</h1><div class="private-note">AI 已经退到一旁。接下来没有推荐、没有分析，只有你们愿意说的话。</div><div class="chat-input"><input placeholder="写下你的消息…"/><button class="primary">发送</button></div><button class="text-btn" data-action="reset">重新体验</button></main>`}
-function bind(){document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==='start'){state.scenario=scenarios.find(x=>x.id===b.dataset.id);state.screen='chat';state.stage=0;play();} if(a==='discover'){state.screen='directions';render();} if(a==='view'){state.selected=b.dataset.id;state.screen='card';render();} if(a==='write'){state.screen='letter';render();} if(a==='send'){state.letter=document.querySelector('#letter').value.trim();if(!state.letter){document.querySelector('#letter').focus();return;}state.invite='sent';state.screen='invite';render();} if(a==='accept'){state.screen='private';render();} if(a==='back'){state.screen=state.screen==='letter'?'card':state.screen==='card'?'directions':'chat';render();} if(a==='stay'){state.screen='chat';render();} if(a==='reset'){clearTimeout(state.timer);state={screen:'home',scenario:null,stage:0,selected:null,letter:'',invite:'draft',timer:null};render();}});}
+function bind(){document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==='start'){state.scenario=scenarios.find(x=>x.id===b.dataset.id);state.screen='chat';state.stage=0;play();} if(a==='discover'){runDiscovery();} if(a==='view'){state.selected=b.dataset.id;state.screen='card';render();} if(a==='write'){state.screen='letter';render();} if(a==='send'){state.letter=document.querySelector('#letter').value.trim();if(!state.letter){document.querySelector('#letter').focus();return;}state.invite='sent';state.screen='invite';render();} if(a==='accept'){state.screen='private';render();} if(a==='back'){state.screen=state.screen==='letter'?'card':state.screen==='card'?(state.selected==='REAL'?'chat':'directions'):'chat';render();} if(a==='stay'){state.screen='chat';render();} if(a==='reset'){clearTimeout(state.timer);state={screen:'home',scenario:null,stage:0,selected:null,letter:'',invite:'draft',timer:null};render();}});}
 function play(){render(); if(state.stage<3){state.timer=setTimeout(()=>{state.stage++;play()},1100);}}
+async function runDiscovery(){
+  const button=document.querySelector('[data-action="discover"]');
+  if(button){button.disabled=true;button.textContent='正在寻找…';}
+  try{
+    const response=await fetch('/api/discover',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({queryText:state.scenario.question})});
+    if(response.status===401){alert('请先使用知乎登录，再开始真实匹配。');return;}
+    const result=await response.json();
+    if(response.ok&&result.success&&result.data){
+      state.scenario.candidates.REAL={
+        id:result.data.id,
+        path:'真实候选 · 授权分享',
+        source:'对方主动授权分享',
+        time:'刚刚生成',
+        quote:result.data.quote,
+        context:result.data.context||result.data.identity,
+        shared:result.data.relation||'这条表达可能与你正在关心的事情有关。',
+        difference:'这里只显示对方允许分享的有限内容快照，候选池中的完整资料仍然不可见。',
+        contact:result.data.contactAllowed===true,
+        name:result.data.identity||'匿名用户',
+        real:true,
+      };
+      state.selected='REAL';state.screen='card';render();return;
+    }
+    state.screen='directions';render();
+  }catch{
+    state.screen='directions';render();
+  }finally{
+    if(button){button.disabled=false;button.textContent='看看';}
+  }
+}
 render();
 
 const authStatus = document.querySelector('#auth-status');
 const zhihuLoginButton = document.querySelector('#zhihu-login');
 const logoutButton = document.querySelector('#logout');
+const privateSpace = document.querySelector('#private-space');
+const privateSpaceBody = document.querySelector('#private-space-body');
+const togglePrivateSpaceButton = document.querySelector('#toggle-private-space');
+const expressionForm = document.querySelector('#expression-form');
+const expressionList = document.querySelector('#expression-list');
+const expressionStatus = document.querySelector('#expression-status');
+const editingExpressionId = document.querySelector('#editing-expression-id');
+const expressionContent = document.querySelector('#expression-content');
+const expressionContext = document.querySelector('#expression-context');
+const allowMatching = document.querySelector('#allow-matching');
+const allowContact = document.querySelector('#allow-contact');
+const identityDisclosure = document.querySelector('#identity-disclosure');
+const cancelExpressionEdit = document.querySelector('#cancel-expression-edit');
+const saveExpressionButton = document.querySelector('#save-expression');
+let currentUser = null;
+let myExpressions = [];
 
 async function refreshAuth() {
   try {
@@ -48,8 +94,11 @@ async function refreshAuth() {
     }
 
     authStatus.textContent = `已登录：${result.user.display_name || '知乎授权用户'}`;
+    currentUser = result.user;
     zhihuLoginButton.hidden = true;
     logoutButton.hidden = false;
+    privateSpace.hidden = false;
+    loadExpressions();
   } catch {
     authStatus.textContent = '暂时无法检查登录状态';
     zhihuLoginButton.hidden = false;
@@ -58,9 +107,163 @@ async function refreshAuth() {
 }
 
 function showLoggedOut() {
+  currentUser = null;
+  myExpressions = [];
   authStatus.textContent = '尚未登录';
   zhihuLoginButton.hidden = false;
   logoutButton.hidden = true;
+  privateSpace.hidden = true;
+  privateSpaceBody.hidden = true;
+  togglePrivateSpaceButton.textContent = '展开';
+}
+
+togglePrivateSpaceButton.addEventListener('click', () => {
+  privateSpaceBody.hidden = !privateSpaceBody.hidden;
+  togglePrivateSpaceButton.textContent = privateSpaceBody.hidden ? '展开' : '收起';
+});
+
+allowMatching.addEventListener('change', () => {
+  allowContact.disabled = !allowMatching.checked;
+  identityDisclosure.disabled = !allowMatching.checked;
+  if (!allowMatching.checked) allowContact.checked = false;
+});
+
+expressionForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const content = expressionContent.value.trim();
+  if (!content) return expressionContent.focus();
+
+  saveExpressionButton.disabled = true;
+  expressionStatus.textContent = '正在保存…';
+  try {
+    const isEditing = Boolean(editingExpressionId.value);
+    const saved = await apiJson('/api/expressions', {
+      method: isEditing ? 'PATCH' : 'POST',
+      body: {
+        expressionId: editingExpressionId.value || undefined,
+        content,
+        contextSummary: expressionContext.value.trim(),
+      },
+    });
+    if (!saved.ok || !saved.result.success) throw new Error('表达保存失败');
+
+    const expressionId = saved.result.data.id;
+    const consent = await apiJson('/api/expression-consent', {
+      method: 'POST',
+      body: {
+        expressionId,
+        matchingAllowed: allowMatching.checked,
+        excerptAllowed: allowMatching.checked,
+        contactAllowed: allowContact.checked,
+        identityDisclosure: identityDisclosure.value,
+      },
+    });
+    if (!consent.ok || !consent.result.success) throw new Error('表达已保存，但授权设置失败');
+
+    resetExpressionForm();
+    expressionStatus.textContent = '保存成功。';
+    await loadExpressions();
+  } catch (error) {
+    expressionStatus.textContent = error instanceof Error ? error.message : '保存失败，请稍后重试。';
+  } finally {
+    saveExpressionButton.disabled = false;
+  }
+});
+
+cancelExpressionEdit.addEventListener('click', resetExpressionForm);
+
+expressionList.addEventListener('click', async event => {
+  const button = event.target.closest('button[data-expression-action]');
+  if (!button) return;
+  const item = myExpressions.find(expression => expression.id === button.dataset.id);
+  if (!item) return;
+
+  if (button.dataset.expressionAction === 'edit') {
+    editingExpressionId.value = item.id;
+    expressionContent.value = item.content;
+    expressionContext.value = item.context_summary || '';
+    allowMatching.checked = isConsentActive(item.consent);
+    allowContact.checked = allowMatching.checked && item.consent?.contact_allowed === true;
+    identityDisclosure.value = item.consent?.identity_disclosure === 'nickname' ? 'nickname' : 'anonymous';
+    allowContact.disabled = !allowMatching.checked;
+    identityDisclosure.disabled = !allowMatching.checked;
+    cancelExpressionEdit.hidden = false;
+    saveExpressionButton.textContent = '保存修改';
+    expressionContent.focus();
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    if (button.dataset.expressionAction === 'revoke') {
+      await apiJson('/api/expression-consent', {
+        method: 'POST',
+        body: { expressionId: item.id, matchingAllowed: false, excerptAllowed: false },
+      });
+      expressionStatus.textContent = '授权已撤回，后续匹配不会再使用这条表达。';
+    }
+    if (button.dataset.expressionAction === 'delete') {
+      await apiJson('/api/expressions', {
+        method: 'DELETE',
+        body: { expressionId: item.id },
+      });
+      expressionStatus.textContent = '表达已删除。';
+    }
+    await loadExpressions();
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function loadExpressions() {
+  if (!currentUser) return;
+  expressionList.innerHTML = '<p class="private-empty">正在读取你的表达…</p>';
+  try {
+    const response = await fetch('/api/expressions', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error();
+    myExpressions = Array.isArray(result.data) ? result.data : [];
+    renderExpressions();
+  } catch {
+    expressionList.innerHTML = '<p class="private-empty">暂时无法读取，请稍后刷新。</p>';
+  }
+}
+
+function renderExpressions() {
+  if (!myExpressions.length) {
+    expressionList.innerHTML = '<p class="private-empty">这里还没有表达。新内容默认只对你可见。</p>';
+    return;
+  }
+  expressionList.innerHTML = myExpressions.map(item => {
+    const active = isConsentActive(item.consent);
+    return `<article class="private-expression"><p>${esc(item.content)}</p>${item.context_summary?`<small>${esc(item.context_summary)}</small>`:''}<div><span class="consent-state ${active?'shared':'private'}">${active?'已授权有限匹配':'仅自己可见'}</span><button type="button" data-expression-action="edit" data-id="${item.id}">编辑</button>${active?`<button type="button" data-expression-action="revoke" data-id="${item.id}">撤回授权</button>`:''}<button type="button" data-expression-action="delete" data-id="${item.id}">删除</button></div></article>`;
+  }).join('');
+}
+
+function isConsentActive(consent) {
+  if (!consent || consent.revoked_at || !consent.matching_allowed || !consent.excerpt_allowed) return false;
+  return !consent.discoverable_until || Date.parse(consent.discoverable_until) > Date.now();
+}
+
+function resetExpressionForm() {
+  expressionForm.reset();
+  editingExpressionId.value = '';
+  allowContact.disabled = true;
+  identityDisclosure.disabled = true;
+  cancelExpressionEdit.hidden = true;
+  saveExpressionButton.textContent = '保存为私人表达';
+}
+
+async function apiJson(url, options) {
+  const response = await fetch(url, {
+    method: options.method,
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(options.body || {}),
+  });
+  let result = {};
+  try { result = await response.json(); } catch {}
+  return { ok: response.ok, result };
 }
 
 logoutButton.addEventListener('click', async () => {

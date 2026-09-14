@@ -12,6 +12,44 @@
     <a id="zhihu-login" href="/api/zhihu-login" hidden>使用知乎登录</a>
     <button id="logout" type="button" hidden>退出登录</button>
   </div>
+  <section id="private-space" class="private-space" hidden>
+    <div class="private-space-heading">
+      <div>
+        <p class="eyebrow">我的私人空间</p>
+        <h2>保存一条自己的表达</h2>
+        <p>默认只有你自己可以查看。只有主动勾选授权后，系统才会把有限片段用于匹配。</p>
+      </div>
+      <button id="toggle-private-space" class="ghost" type="button">展开</button>
+    </div>
+    <div id="private-space-body" hidden>
+      <form id="expression-form">
+        <input id="editing-expression-id" type="hidden"/>
+        <label for="expression-content">表达内容</label>
+        <textarea id="expression-content" maxlength="10000" required placeholder="写下你愿意保存的想法……"></textarea>
+        <label for="expression-context">有限背景（选填）</label>
+        <input id="expression-context" maxlength="1000" placeholder="例如：工作五年，正在考虑新的方向"/>
+        <label class="consent-choice">
+          <input id="allow-matching" type="checkbox"/>
+          允许系统用于匹配，并向匹配到的人展示最多 320 个字的片段
+        </label>
+        <label class="consent-choice">
+          <input id="allow-contact" type="checkbox" disabled/>
+          匹配后允许对方发起联系
+        </label>
+        <label for="identity-disclosure">匹配时如何显示身份</label>
+        <select id="identity-disclosure" disabled>
+          <option value="anonymous">匿名</option>
+          <option value="nickname">显示昵称</option>
+        </select>
+        <div class="private-form-actions">
+          <button id="cancel-expression-edit" class="ghost" type="button" hidden>取消编辑</button>
+          <button id="save-expression" class="primary" type="submit">保存为私人表达</button>
+        </div>
+        <p id="expression-status" role="status"></p>
+      </form>
+      <div id="expression-list" class="expression-list"></div>
+    </div>
+  </section>
   <div id="app"></div>
   <script type="module" src="/app.js"></script>
 </body>
