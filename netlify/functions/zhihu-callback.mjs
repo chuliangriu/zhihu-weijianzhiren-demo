@@ -37,15 +37,22 @@ export default async function handler(request) {
   }
 
   const apiCode = Number(userInfo.code ?? userInfo.Code);
-  if (Number.isFinite(apiCode) && apiCode !== 0) {
+  if (Number.isFinite(apiCode) && apiCode !== 0 && apiCode !== 20004) {
     return new Response(`知乎用户资料接口返回业务错误（code ${apiCode}）`, { status: 502 });
   }
 
-  const rawUser = userInfo.data || userInfo.Data || userInfo.user || userInfo.User || userInfo;
+  const profileUnavailable = apiCode === 20004;
+  const rawUser = profileUnavailable
+    ? {}
+    : userInfo.data || userInfo.Data || userInfo.user || userInfo.User || userInfo;
   const user = normalizeZhihuUser(rawUser);
-  const zhihuUserId = String(
+  let zhihuUserId = String(
     user.id || user.user_id || user.userId || user.uid || user.url_token || user.urlToken || ''
   ).trim();
+  if (profileUnavailable) {
+    zhihuUserId = await deriveInternalUserId(tokenData.access_token);
+    user.name = '知乎授权用户';
+  }
   if (!zhihuUserId) {
     const topKeys = Object.keys(userInfo).join(', ') || '无';
     const userKeys = Object.keys(user).join(', ') || '无';
@@ -128,4 +135,11 @@ function normalizeZhihuUser(rawUser) {
   }
 
   return { id: rawUser };
+}
+
+async function deriveInternalUserId(accessToken) {
+  const bytes = new TextEncoder().encode(accessToken);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `oauth_${hex}`;
 }
