@@ -1,2 +1,18 @@
 ﻿<!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>未见之人 · Demo</title><link rel="stylesheet" href="/styles.css"/></head><body><div id="oauth-bar"><a id="zhihu-login" href="/api/zhihu-login">使用知乎授权</a></div><div id="app"></div><script type="module" src="/app.js"></script></body></html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>未见之人 · Demo</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div id="oauth-bar" class="oauth-bar">
+    <span id="auth-status">正在检查登录状态…</span>
+    <a id="zhihu-login" href="/api/zhihu-login" hidden>使用知乎登录</a>
+    <button id="logout" type="button" hidden>退出登录</button>
+  </div>
+  <div id="app"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

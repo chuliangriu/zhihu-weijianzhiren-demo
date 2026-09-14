@@ -23,7 +23,58 @@ function privateChat(c){return `<main class="private-page"><p class="eyebrow">�
 function bind(){document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==='start'){state.scenario=scenarios.find(x=>x.id===b.dataset.id);state.screen='chat';state.stage=0;play();} if(a==='discover'){state.screen='directions';render();} if(a==='view'){state.selected=b.dataset.id;state.screen='card';render();} if(a==='write'){state.screen='letter';render();} if(a==='send'){state.letter=document.querySelector('#letter').value.trim();if(!state.letter){document.querySelector('#letter').focus();return;}state.invite='sent';state.screen='invite';render();} if(a==='accept'){state.screen='private';render();} if(a==='back'){state.screen=state.screen==='letter'?'card':state.screen==='card'?'directions':'chat';render();} if(a==='stay'){state.screen='chat';render();} if(a==='reset'){clearTimeout(state.timer);state={screen:'home',scenario:null,stage:0,selected:null,letter:'',invite:'draft',timer:null};render();}});}
 function play(){render(); if(state.stage<3){state.timer=setTimeout(()=>{state.stage++;play()},1100);}}
 render();
+
+const authStatus = document.querySelector('#auth-status');
 const zhihuLoginButton = document.querySelector('#zhihu-login');
-if (zhihuLoginButton) zhihuLoginButton.addEventListener('click', () => {
-  window.location.href = '/api/zhihu-login';
+const logoutButton = document.querySelector('#logout');
+
+async function refreshAuth() {
+  try {
+    const response = await fetch('/api/auth-me', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      showLoggedOut();
+      return;
+    }
+
+    const result = await response.json();
+    if (!result.success || !result.user) {
+      showLoggedOut();
+      return;
+    }
+
+    authStatus.textContent = `已登录：${result.user.display_name || '知乎授权用户'}`;
+    zhihuLoginButton.hidden = true;
+    logoutButton.hidden = false;
+  } catch {
+    authStatus.textContent = '暂时无法检查登录状态';
+    zhihuLoginButton.hidden = false;
+    logoutButton.hidden = true;
+  }
+}
+
+function showLoggedOut() {
+  authStatus.textContent = '尚未登录';
+  zhihuLoginButton.hidden = false;
+  logoutButton.hidden = true;
+}
+
+logoutButton.addEventListener('click', async () => {
+  logoutButton.disabled = true;
+  try {
+    await fetch('/api/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+  } finally {
+    logoutButton.disabled = false;
+    showLoggedOut();
+  }
 });
+
+refreshAuth();
