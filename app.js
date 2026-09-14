@@ -25,5 +25,5 @@ function play(){render(); if(state.stage<3){state.timer=setTimeout(()=>{state.st
 render();
 const zhihuLoginButton = document.querySelector('#zhihu-login');
 if (zhihuLoginButton) zhihuLoginButton.addEventListener('click', () => {
-  window.location.href = '/.netlify/functions/zhihu-login';
+  window.location.href = '/api/zhihu-login';
 });
