@@ -36,7 +36,13 @@ export default async function handler(request) {
     return new Response(`知乎授权成功，但未能读取用户资料（HTTP ${userResponse.status}）`, { status: 502 });
   }
 
-  const user = userInfo.data || userInfo.Data || userInfo.user || userInfo.User || userInfo;
+  const apiCode = Number(userInfo.code ?? userInfo.Code);
+  if (Number.isFinite(apiCode) && apiCode !== 0) {
+    return new Response(`知乎用户资料接口返回业务错误（code ${apiCode}）`, { status: 502 });
+  }
+
+  const rawUser = userInfo.data || userInfo.Data || userInfo.user || userInfo.User || userInfo;
+  const user = normalizeZhihuUser(rawUser);
   const zhihuUserId = String(
     user.id || user.user_id || user.userId || user.uid || user.url_token || user.urlToken || ''
   ).trim();
@@ -110,3 +116,16 @@ async function saveToSupabase(user, zhihuUserId, tokenData) {
 }
 
 export const config = { path: '/.netlify/functions/zhihu-callback' };
+
+function normalizeZhihuUser(rawUser) {
+  if (typeof rawUser !== 'string') return rawUser;
+
+  try {
+    const parsed = JSON.parse(rawUser);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {
+    // 知乎当前接口可能直接返回稳定的用户标识字符串。
+  }
+
+  return { id: rawUser };
+}
